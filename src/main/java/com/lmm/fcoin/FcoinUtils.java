@@ -3,6 +3,7 @@ package com.lmm.fcoin;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.lmm.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -22,7 +23,9 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -141,7 +144,7 @@ public class FcoinUtils {
             }
             amount = amount.subtract(maxNumDeci);
 
-            Thread.sleep(5000);
+            Thread.sleep(1000);
         }
     }
 
@@ -155,17 +158,16 @@ public class FcoinUtils {
 
     private static boolean createOrder(String amount, String price, String side, String symbol, String type) throws Exception {
         String url = "https://api.fcoin.com/v2/orders";
-        Long timeStamp = System.currentTimeMillis();
+
         HttpHeaders headers = new HttpHeaders();
-        headers.add("FC-ACCESS-KEY", app_key);
-        headers.add("FC-ACCESS-TIMESTAMP", timeStamp.toString());
+
 
         MediaType t = MediaType.parseMediaType("application/json; charset=UTF-8");
         headers.setContentType(t);
         headers.setAccept(Collections.singletonList(MediaType.ALL));
 
         //  封装参数，千万不要替换为Map与HashMap，否则参数无法传递
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>(32);
         //  也支持中文
         params.put("amount", amount);
         params.put("side", side);
@@ -178,31 +180,28 @@ public class FcoinUtils {
         } else if ("market".equals(type)) {
             urlSeri = "amount=" + amount + "&side=" + side + "&symbol=" + symbol + "&type=" + type;
         }
+        Long timeStamp = HttpUtils.getServiceTime();
+        System.out.println(timeStamp);
+        headers.add("FC-ACCESS-KEY", app_key);
+        headers.add("FC-ACCESS-TIMESTAMP", timeStamp.toString());
         headers.add("FC-ACCESS-SIGNATURE",
                 getSign("POST" + url + timeStamp + urlSeri, app_secret));
 
         String param = JSON.toJSONString(params);
         logger.info(param);
-        HttpEntity<String> requestEntity = new HttpEntity<String>(param, headers);
+        HttpEntity<String> requestEntity = new HttpEntity<>(param, headers);
         RestTemplate client = new RestTemplate();
         client.getMessageConverters().set(1, new StringHttpMessageConverter(StandardCharsets.UTF_8));
         ResponseEntity<String> response;
         try {
             response = client.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            System.out.println(response);
         } catch (Exception e) {
-            logger.error("买卖有异常", e);
-            throw new Exception(e);
+            logger.error("买卖有异常", e.getMessage());
+            //throw new Exception(e);
         }
-        logger.info(response.getBody());
-        if (StringUtils.isEmpty(response.getBody())) {
-            throw new Exception("订单创建失败：" + type);
-        }
-        if (!StringUtils.isEmpty(response.getBody())) {
-            String data = JSON.parseObject(response.getBody()).getString("data");
-            if (StringUtils.isEmpty(data)) {
-                throw new Exception("订单创建失败：" + type);
-            }
-        }
+
+
         return true;
     }
 
@@ -705,6 +704,35 @@ public class FcoinUtils {
     }
 
     public static void main(String[] args) throws Exception {
-        getSymbols();
+
+
+
+        while (1==1){
+
+            Map<String, Double> ftusdt = getPriceInfo("ftusdt");
+
+            Double  marketpricesell = ftusdt.get("marketPrice") * 1.0001;
+            String up = NumberFormatUtils.up(marketpricesell);
+
+            Double  marketpricebuy = ftusdt.get("marketPrice") * 0.9999;
+            String down = NumberFormatUtils.down(marketpricebuy);
+
+
+            boolean order = createOrder("10", down + "", "buy", "ftusdt", "limit");
+            System.out.println(up+" ---- " + down +" ---" + order);
+            if (order){
+                createOrder("10",up+"","sell","ftusdt","limit");
+            }
+
+            Thread.sleep(100);
+
+        }
+
+
+
+
+
+
+
     }
 }
