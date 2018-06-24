@@ -323,13 +323,8 @@ public class FcoinUtils {
                 RestTemplate client = new RestTemplate();
                 client.getMessageConverters().set(1, new StringHttpMessageConverter(StandardCharsets.UTF_8));
                 ResponseEntity<String> response = client.exchange(url, HttpMethod.POST, requestEntity, String.class);
-                if (StringUtils.isEmpty(response.getBody())) {
-                    throw new Exception("cacel order error");
-                }
-                boolean flag = JSON.parseObject(response.getBody()).getBoolean("data");
-                if (!flag) {
-                    throw new Exception("cacel order error");
-                }
+                 Thread.sleep(500);
+
                 return true;
             });
         }
@@ -711,26 +706,22 @@ public class FcoinUtils {
 
             Map<String, Double> ftusdt = getPriceInfo("ftusdt");
 
-            Double  marketpricesell = ftusdt.get("marketPrice") * 1.0001;
+            Double  marketpricesell = ftusdt.get("marketPrice") * 1.0002;
             String up = NumberFormatUtils.up(marketpricesell);
 
-            Double  marketpricebuy = ftusdt.get("marketPrice") * 0.9999;
+            Double  marketpricebuy = ftusdt.get("marketPrice") * 0.9998;
             String down = NumberFormatUtils.down(marketpricebuy);
 
 
-            boolean order = createOrder("10", down + "", "buy", "ftusdt", "limit");
-            System.out.println(up+" ---- " + down +" ---" + order);
+            boolean order = createOrder("50", down + "", "buy", "ftusdt", "limit");
+            logger.info(up+" ---- " + down +" ---" + order);
             if (order){
-                createOrder("10",up+"","sell","ftusdt","limit");
+                createOrder("50",up+"","sell","ftusdt","limit");
             }
 
-            Thread.sleep(100);
+            Thread.sleep(500);
 
         }
-
-
-
-
 
 
 
