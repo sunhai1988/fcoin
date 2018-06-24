@@ -181,7 +181,6 @@ public class FcoinUtils {
             urlSeri = "amount=" + amount + "&side=" + side + "&symbol=" + symbol + "&type=" + type;
         }
         Long timeStamp = HttpUtils.getServiceTime();
-        System.out.println(timeStamp);
         headers.add("FC-ACCESS-KEY", app_key);
         headers.add("FC-ACCESS-TIMESTAMP", timeStamp.toString());
         headers.add("FC-ACCESS-SIGNATURE",
@@ -697,12 +696,8 @@ public class FcoinUtils {
             Thread.sleep(1000);
         }
     }
+    public   void start()  throws Exception {
 
-    public static void main(String[] args) throws Exception {
-
-
-
-        while (1==1){
 
             Map<String, Double> ftusdt = getPriceInfo("ftusdt");
 
@@ -718,11 +713,6 @@ public class FcoinUtils {
             if (order){
                 createOrder("50",up+"","sell","ftusdt","limit");
             }
-
-            Thread.sleep(500);
-
-        }
-
 
 
     }
