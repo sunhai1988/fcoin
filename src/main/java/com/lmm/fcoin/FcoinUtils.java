@@ -8,11 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.util.MultiValueMap;
@@ -23,18 +19,10 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
-import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class FcoinUtils {
@@ -282,6 +270,22 @@ public class FcoinUtils {
         }
     }
 
+    public static  JSONArray getOrdesJSONArray(String symbol, String states, String after, String limit, String side) throws Exception {
+        String url = "https://api.fcoin.com/v2/orders?after=" + after + "&limit=" + limit + "&states=" + states + "&symbol=" + symbol;
+        Long timeStamp = System.currentTimeMillis();
+        MultiValueMap<String, String> headers = new HttpHeaders();
+        headers.add("FC-ACCESS-KEY", app_key);
+        headers.add("FC-ACCESS-SIGNATURE", getSign("GET" + url + timeStamp, app_secret));
+        headers.add("FC-ACCESS-TIMESTAMP", timeStamp.toString());
+
+        HttpEntity requestEntity = new HttpEntity<>(headers);
+        RestTemplate client = new RestTemplate();
+        client.getMessageConverters().set(1, new StringHttpMessageConverter(StandardCharsets.UTF_8));
+        ResponseEntity<String> response = client.exchange(url, HttpMethod.GET, requestEntity, String.class);
+        logger.info(response.getBody());
+        return JSON.parseObject(response.getBody()).getJSONArray("data");
+    }
+
     public List<String> getNotTradeOrders(String symbol, String after, String limit) throws Exception {
         List<String> list1 = getOrdes(symbol, "submitted", after, limit, null);
         List<String> list2 = getOrdes(symbol, "partial_filled", after, limit, null);
@@ -296,7 +300,7 @@ public class FcoinUtils {
         return list1;
     }
 
-    public boolean cancelOrders(List<String> orderIds) throws Exception {
+    public static  boolean cancelOrders(List<String> orderIds) throws Exception {
         if (orderIds == null || orderIds.size() == 0) {
             return false;
         }
@@ -696,7 +700,7 @@ public class FcoinUtils {
             Thread.sleep(1000);
         }
     }
-    public   void start()  throws Exception {
+    public static   void start()  throws Exception {
 
 
             Map<String, Double> ftusdt = getPriceInfo("ftusdt");
@@ -713,6 +717,35 @@ public class FcoinUtils {
             if (order){
                 createOrder("50",up+"","sell","ftusdt","limit");
             }
+
+
+    }
+
+    public static  void cancelTopAndLowest(){
+        try {
+            JSONArray ordesJSONArray = getOrdesJSONArray("ftusdt", "submitted", "1500000", "100", null);
+            JSONArray ordesJSONArray1 = getOrdesJSONArray("ftusdt", "partial_filled", "1500000", "100", null);
+
+            if (ordesJSONArray !=null ){
+                ordesJSONArray.addAll(ordesJSONArray1);
+            }
+            if (ordesJSONArray.size() >= 40){
+                CancelUtils  cancelUtils =  new CancelUtils();
+                JSONObject maxObject = cancelUtils.maxPriceJSONobject(ordesJSONArray);
+                JSONObject minObject = cancelUtils.minPriceJSONobject(ordesJSONArray);
+                cancelUtils.cancelOrder(maxObject);
+                cancelUtils.cancelOrder(minObject);
+            }
+        }catch (Exception e){
+
+        }
+
+    }
+
+
+    public  static void  main(String[] args) throws  Exception{
+
+
 
 
     }
