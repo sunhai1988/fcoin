@@ -717,6 +717,9 @@ public class FcoinUtils {
 
         logger.info(up + " ---- " + down + " ---");
         JSONArray ordesJSONArray = getAllOrder("ftusdt");
+        if(ordesJSONArray == null || ordesJSONArray.size() < 10){
+            return;
+        }
         Map<String, Integer> stringIntegerMap = countSide(ordesJSONArray);
         CancelUtils cancelUtils = new CancelUtils();
         // 卖单多成交少  下跌 趋势
