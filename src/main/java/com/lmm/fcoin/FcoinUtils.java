@@ -11,6 +11,7 @@ import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.http.*;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -700,53 +701,118 @@ public class FcoinUtils {
             Thread.sleep(1000);
         }
     }
-    public static   void start()  throws Exception {
+
+    public static void start() throws Exception {
 
 
-            Map<String, Double> ftusdt = getPriceInfo("ftusdt");
+        Map<String, Double> ftusdt = getPriceInfo("ftusdt");
+        Double markectprice =    ftusdt.get("marketPrice");
+        Double marketpricesell = markectprice * 1.0002d;
+        String up = NumberFormatUtils.up(marketpricesell);
 
-            Double  marketpricesell = ftusdt.get("marketPrice") * 1.0002;
-            String up = NumberFormatUtils.up(marketpricesell);
-
-            Double  marketpricebuy = ftusdt.get("marketPrice") * 0.9998;
-            String down = NumberFormatUtils.down(marketpricebuy);
+        Double marketpricebuy = markectprice * (1 - 0.0002);
+        String down = NumberFormatUtils.down(marketpricebuy);
 
 
-            boolean order = createOrder("50", down + "", "buy", "ftusdt", "limit");
-            logger.info(up+" ---- " + down +" ---" + order);
-            if (order){
-                createOrder("50",up+"","sell","ftusdt","limit");
+
+        logger.info(up + " ---- " + down + " ---");
+        JSONArray ordesJSONArray = getAllOrder("ftusdt");
+        Map<String, Integer> stringIntegerMap = countSide(ordesJSONArray);
+        CancelUtils cancelUtils = new CancelUtils();
+        // 卖单多成交少  下跌 趋势
+        if (stringIntegerMap.get("sell") > stringIntegerMap.get("buy")) {
+            // 取消 买单
+            logger.info("卖单多成交少  下跌 趋势 卖出");
+            JSONObject maxBuyObject = cancelUtils.maxBuyPriceObject(ordesJSONArray);
+            cancelUtils.cancelOrder(maxBuyObject);
+            // 没有买单 全卖
+            if (stringIntegerMap.get("buy") == 0){
+                //市场价格卖出
+                JSONObject maxSellObject = cancelUtils.maxSellPriceObject(ordesJSONArray);
+                cancelUtils.cancelOrder(maxSellObject);
+                createOrder("50",  NumberFormatUtils.down(markectprice), "sell", "ftusdt", "limit");
             }
+        } else if(stringIntegerMap.get("sell") < stringIntegerMap.get("buy")){
+            // 买单 成交少  上涨趋势  取消最小卖单
+            logger.info("买单 成交少  上涨趋势  取消最小卖单");
+            JSONObject minSellObject = cancelUtils.minSellPriceObject(ordesJSONArray);
+            cancelUtils.cancelOrder(minSellObject);
 
+            if (stringIntegerMap.get("sell") == 0){
+                logger.info("市价买入");
+                createOrder("50",  NumberFormatUtils.up(markectprice), "buy", "ftusdt", "limit");
+            }else{
+                createOrder("50", down + "", "buy", "ftusdt", "limit");
+            }
+        }else{
+            createOrder("50", up + "", "sell", "ftusdt", "limit");
+            createOrder("50", down + "", "buy", "ftusdt", "limit");
+        }
+
+    }
+    /**
+     * @param  symbol
+     * */
+    public static JSONArray getAllOrder(String symbol){
+        try {
+            JSONArray ordesJSONArray = getOrdesJSONArray(symbol, "submitted", "1500000", "100", null);
+            JSONArray ordesJSONArray1 = getOrdesJSONArray(symbol, "partial_filled", "1500000", "100", null);
+            if (ordesJSONArray !=null ){
+                ordesJSONArray.addAll(ordesJSONArray1);
+            }
+            return ordesJSONArray == null ? ordesJSONArray1 : ordesJSONArray;
+        }catch (Exception ex){
+
+        }
+        return null;
 
     }
 
     public static  void cancelTopAndLowest(){
         try {
-            JSONArray ordesJSONArray = getOrdesJSONArray("ftusdt", "submitted", "1500000", "100", null);
-            JSONArray ordesJSONArray1 = getOrdesJSONArray("ftusdt", "partial_filled", "1500000", "100", null);
-
-            if (ordesJSONArray !=null ){
-                ordesJSONArray.addAll(ordesJSONArray1);
-            }
-            if (ordesJSONArray.size() >= 40){
-                CancelUtils  cancelUtils =  new CancelUtils();
-                JSONObject maxObject = cancelUtils.maxPriceJSONobject(ordesJSONArray);
+            JSONArray ordesJSONArray = getAllOrder("ftusdt");
+            Map<String, Integer> stringIntegerMap = countSide(ordesJSONArray);
+            CancelUtils  cancelUtils =  new CancelUtils();
+            // 卖单多成交少  下跌 趋势
+            if (stringIntegerMap.get("sell") > stringIntegerMap.get("buy")){
+                // 取消 买单
                 JSONObject minObject = cancelUtils.minPriceJSONobject(ordesJSONArray);
-                cancelUtils.cancelOrder(maxObject);
                 cancelUtils.cancelOrder(minObject);
+            }else{
+                JSONObject maxObject = cancelUtils.maxPriceJSONobject(ordesJSONArray);
+                cancelUtils.cancelOrder(maxObject);
             }
         }catch (Exception e){
 
         }
+    }
+    /***
+     *
+     * 挂单数据类型
+     *
+     * */
+    public static  Map<String,Integer>  countSide(JSONArray jsonArray){
+        Integer  sellcount = 0;
+        Integer  buycount = 0;
+        Map<String,Integer>  countMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(jsonArray)) {
+            for (int i = 0; i < jsonArray.size(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                if ("sell".equals(jsonObject.getString("side"))){
+                    sellcount = sellcount + 1;
+                }else{
+                    buycount = buycount +1;
+                }
+            }
+        }
+        countMap.put("sell",sellcount);
+        countMap.put("buy",buycount);
+        return countMap;
 
     }
 
 
     public  static void  main(String[] args) throws  Exception{
-
-
-
-
+        start();
     }
 }

@@ -31,6 +31,55 @@ public class CancelUtils {
         return maxJson;
     }
 
+    public JSONArray filterBuyArray(JSONArray jsonArray){
+        JSONArray buyArray = new JSONArray();
+        if (!CollectionUtils.isEmpty(jsonArray)) {
+            for (int i = 0; i < jsonArray.size(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                String  side = jsonObject.getString("side");
+                if ("buy".equals(side)){
+                    buyArray.add(jsonObject);
+                }
+            }
+        }
+        return buyArray;
+    }
+
+    public JSONArray filterSellArray(JSONArray jsonArray){
+        JSONArray sellArray = new JSONArray();
+        if (!CollectionUtils.isEmpty(jsonArray)) {
+            for (int i = 0; i < jsonArray.size(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                String  side = jsonObject.getString("side");
+                if ("sell".equals(side)){
+                    sellArray.add(jsonObject);
+                }
+            }
+        }
+        return sellArray;
+    }
+
+    public  JSONObject minBuyPriceObject(JSONArray allOrder){
+        JSONArray jsonArray = this.filterBuyArray(allOrder);
+        return this.minPriceJSONobject(jsonArray);
+    }
+
+    public  JSONObject maxBuyPriceObject(JSONArray allOrder){
+        JSONArray jsonArray = this.filterBuyArray(allOrder);
+        return this.maxPriceJSONobject(jsonArray);
+    }
+
+    public  JSONObject maxSellPriceObject(JSONArray allOrder){
+        JSONArray jsonArray = this.filterSellArray(allOrder);
+        return this.maxPriceJSONobject(jsonArray);
+    }
+
+    public  JSONObject minSellPriceObject(JSONArray allOrder){
+        JSONArray jsonArray = this.filterSellArray(allOrder);
+        return this.minPriceJSONobject(jsonArray);
+    }
+
+
     public JSONObject minPriceJSONobject(JSONArray jsonArray){
 
         double  priceMin = 1000000000f;
