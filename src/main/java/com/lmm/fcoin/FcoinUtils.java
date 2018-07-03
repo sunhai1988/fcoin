@@ -717,13 +717,11 @@ public class FcoinUtils {
 
         logger.info(up + " ---- " + down + " ---");
         JSONArray ordesJSONArray = getAllOrder("ftusdt");
-        if(ordesJSONArray == null || ordesJSONArray.size() < 10){
-            return;
-        }
+
         Map<String, Integer> stringIntegerMap = countSide(ordesJSONArray);
         CancelUtils cancelUtils = new CancelUtils();
         // 卖单多成交少  下跌 趋势
-        if (stringIntegerMap.get("sell") > stringIntegerMap.get("buy")) {
+        if (stringIntegerMap.get("sell") > stringIntegerMap.get("buy") && ordesJSONArray.size() > 10) {
             // 取消 买单
             logger.info("卖单多成交少  下跌 趋势 卖出");
             JSONObject maxBuyObject = cancelUtils.maxBuyPriceObject(ordesJSONArray);
@@ -735,7 +733,7 @@ public class FcoinUtils {
                 cancelUtils.cancelOrder(maxSellObject);
                 createOrder("50",  NumberFormatUtils.down(markectprice), "sell", "ftusdt", "limit");
             }
-        } else if(stringIntegerMap.get("sell") < stringIntegerMap.get("buy")){
+        } else if(stringIntegerMap.get("sell") < stringIntegerMap.get("buy") && ordesJSONArray.size() > 10){
             // 买单 成交少  上涨趋势  取消最小卖单
             logger.info("买单 成交少  上涨趋势  取消最小卖单");
             JSONObject minSellObject = cancelUtils.minSellPriceObject(ordesJSONArray);
