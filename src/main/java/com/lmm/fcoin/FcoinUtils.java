@@ -739,7 +739,10 @@ public class FcoinUtils {
             cancelUtils.cancelOrder(minSellObject);
 
             if (stringIntegerMap.get("sell") == 0){
-                logger.info("市价买入");
+                logger.info("取消最小买入");
+                JSONObject minBuyObject = cancelUtils.minBuyPriceObject(ordesJSONArray);
+                cancelUtils.cancelOrder(minBuyObject);
+                logger.info("市场买入");
                 createOrder("50",  NumberFormatUtils.up(markectprice), "buy", "ftusdt", "limit");
             }else{
                 createOrder("50", down + "", "buy", "ftusdt", "limit");
