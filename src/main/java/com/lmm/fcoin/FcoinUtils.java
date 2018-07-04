@@ -724,25 +724,20 @@ public class FcoinUtils {
         if (stringIntegerMap.get("sell") > stringIntegerMap.get("buy") && ordesJSONArray.size() > 10) {
             // 取消 买单
             logger.info("卖单多成交少  下跌 趋势 卖出");
-            JSONObject maxBuyObject = cancelUtils.maxBuyPriceObject(ordesJSONArray);
-            cancelUtils.cancelOrder(maxBuyObject);
             // 没有买单 全卖
             if (stringIntegerMap.get("buy") == 0){
                 //市场价格卖出
-                JSONObject maxSellObject = cancelUtils.maxSellPriceObject(ordesJSONArray);
-                cancelUtils.cancelOrder(maxSellObject);
                 createOrder("50",  NumberFormatUtils.down(markectprice), "sell", "ftusdt", "limit");
             }
+            JSONObject maxBuyObject = cancelUtils.maxBuyPriceObject(ordesJSONArray);
+            cancelUtils.cancelOrder(maxBuyObject);
         } else if(stringIntegerMap.get("sell") < stringIntegerMap.get("buy") && ordesJSONArray.size() > 10){
             // 买单 成交少  上涨趋势  取消最小卖单
             logger.info("买单 成交少  上涨趋势  取消最小卖单");
-            JSONObject minSellObject = cancelUtils.minSellPriceObject(ordesJSONArray);
-            cancelUtils.cancelOrder(minSellObject);
-
             if (stringIntegerMap.get("sell") == 0){
                 logger.info("取消最小买入");
-                JSONObject minBuyObject = cancelUtils.minBuyPriceObject(ordesJSONArray);
-                cancelUtils.cancelOrder(minBuyObject);
+                JSONObject maxBuyObject = cancelUtils.maxBuyPriceObject(ordesJSONArray);
+                cancelUtils.cancelOrder(maxBuyObject);
                 logger.info("市场买入");
                 createOrder("50",  NumberFormatUtils.up(markectprice), "buy", "ftusdt", "limit");
             }else{
